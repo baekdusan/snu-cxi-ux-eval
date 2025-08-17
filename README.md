@@ -28,7 +28,7 @@ Samsung MX UI에 대한 UX/UI 분석을 위한 AI 기반 분석 시스템입니�
 ## 📁 **프로젝트 구조**
 
 ```
-ss_mx_agent/
+snu-cxi-ux-eval/
 ├── app.py                          # 메인 Gradio 애플리케이션
 ├── config.py                       # 설정 관리 (API 키, 모델 설정)
 ├── utils.py                        # 유틸리티 함수들 (이미지 인코딩, 캐시 관리)
@@ -87,7 +87,7 @@ python app.py
 ## 🔧 **기술 스택**
 
 - **Python 3.8+**: 메인 프로그래밍 언어
-- **Gradio 4.40+**: 웹 UI 프레임워크  
+- **Gradio 3.50.2**: 웹 UI 프레임워크  
 - **OpenAI API (순정)**: Responses API, Vector Stores, File API
 - **GPT-4o**: 멀티모달 AI 모델
 - **PIL (Pillow)**: 이미지 처리
@@ -162,7 +162,7 @@ python app.py
 ## 🛠️ **개발 정보**
 
 - **Python 버전**: 3.8+
-- **Gradio 버전**: 4.40+ (업그레이드됨)
+- **Gradio 버전**: 3.50.2
 - **OpenAI API**: 순정 API, GPT-4o 모델, Responses API 사용
 - **이미지 형식**: PNG, JPG, JPEG, BMP, GIF 지원
 - **데이터 형식**: JSON 구조화된 출력
