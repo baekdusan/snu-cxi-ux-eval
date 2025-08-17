@@ -1,3 +1,15 @@
+---
+title: Samsung UX Evaluation
+emoji: 📱
+colorFrom: blue
+colorTo: purple
+sdk: gradio
+sdk_version: 3.50.2
+app_file: app.py
+pinned: false
+---
+
+
 # Samsung MX UI Analytics System
 
 Samsung MX UI에 대한 UX/UI 분석을 위한 AI 기반 분석 시스템입니다. 스크린샷을 업로드하여 4가지 전문 에이전트(Visibility, Information Architecture, Icon Representativeness, User Task Suitability)로 분석하고, 최종 레포트를 생성할 수 있습니다.
