@@ -224,8 +224,6 @@ with demo:
                 cache_status_btn = gr.Button("캐시 상태 조회", variant="secondary")
                 clear_btn = gr.Button("초기화", variant="stop", interactive=True)
             
-            final_report_btn = gr.Button("최종 평가 결과 논의 시작", variant="primary", interactive=False)
-            
             # 초기화 확인 다이얼로그
             clear_confirm_row, clear_confirm_text, clear_confirm_btn, clear_cancel_btn = create_clear_confirm_dialog()
 
@@ -241,6 +239,9 @@ with demo:
             final_report_components = create_final_report_mode()
             (final_report_mode, final_report_chat, final_report_input, 
              final_report_send_btn, back_to_evaluation_btn, save_discussion_btn, clear_chat_btn) = final_report_components
+            
+            # 최종 논의 시작 버튼 (모든 평가 완료 후)
+            final_report_btn = gr.Button("🚀 최종 평가 결과 논의 시작", variant="primary", interactive=False, size="lg")
 
     # 이벤트 연결
     # API 키 검증

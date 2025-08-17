@@ -40,7 +40,7 @@ def create_agent_selector():
         choices=[
             "Text Legibility",
             "Information Architecture", 
-            "Representativeness",
+            "Icon Representativeness",
             "User Task Suitability"
         ],
         label="Evaluation Module",

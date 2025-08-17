@@ -39,7 +39,7 @@ class SimplePromptLoader:
         self.reference_mapping = {
             "Text Legibility": ["Agent1_Text_heuristics.md"],
             "Information Architecture": ["Agent2_Terms_and_definitions.md", "Agent2_IA_heuristics.md"],
-            "Representativeness": ["Agent3_Icon_heuristics.md"],
+            "Icon Representativeness": ["Agent3_Icon_heuristics.md"],
             "User Task Suitability": ["Agent4_Terms_and_definitions.md", "Agent4_heuristics.md"]
         }
         
@@ -142,7 +142,7 @@ class SimplePromptLoader:
         mapping = {
             "Text Legibility": "1",
             "Information Architecture": "2",
-            "Representativeness": "3", 
+            "Icon Representativeness": "3", 
             "User Task Suitability": "4"
         }
         if agent_name not in mapping:
