@@ -33,6 +33,37 @@ def set_vector_store_id(vs_id):
     global vector_store_id
     vector_store_id = vs_id
 
+def ensure_vector_store_with_api_key(api_key):
+    """벡터스토어가 없으면 API 키로 새로 생성, 있으면 그대로 사용"""
+    global vector_store_id
+    
+    # 이미 벡터스토어가 있으면 그냥 사용
+    if vector_store_id:
+        print(f"✅ 기존 벡터스토어 사용: {vector_store_id}")
+        return vector_store_id
+    
+    # 벡터스토어가 없으면 API 키로 새로 생성
+    try:
+        from prompts.prompt_loader import SimplePromptLoader
+        from config import get_openai_client
+        
+        loader = SimplePromptLoader()
+        loader.client = get_openai_client(api_key)
+        
+        vs_id = loader.create_vector_store()
+        if vs_id:
+            vector_store_id = vs_id
+            print(f"✅ 새 벡터스토어 생성 완료: {vs_id}")
+            return vs_id
+        else:
+            print("❌ 벡터스토어 생성 실패")
+            return None
+    except Exception as e:
+        print(f"❌ 벡터스토어 생성 오류: {e}")
+        return None
+
+
+
 def convert_files_to_images(files_input):
     """Gradio 파일 객체를 PIL Image로 변환"""
     if not files_input:

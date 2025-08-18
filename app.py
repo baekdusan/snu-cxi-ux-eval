@@ -19,17 +19,30 @@ from ui.business_logic import (
     set_vector_store_id, run_dr_generation, confirm_dr_generation, 
     generate_evaluation, get_cache_status, switch_to_final_report_mode,
     switch_to_evaluation_mode, send_final_report_message, clear_final_report_chat,
-    download_evaluation_json, save_discussion_dialog
+    download_evaluation_json, save_discussion_dialog, ensure_vector_store_with_api_key
 )
 
-# 벡터 스토어 초기화
+# 벡터 스토어 초기화 (캐시에서 직접 로드)
+import json
+from pathlib import Path
+
 try:
-    _loader = SimplePromptLoader()
-    vector_store_id = _loader.get_vector_store_id()
-    set_vector_store_id(vector_store_id)
-    print(f"[INIT] vector_store_id = {vector_store_id}")
+    cache_file = Path(".vector_store_cache.json")
+    if cache_file.exists():
+        with open(cache_file, 'r', encoding='utf-8') as f:
+            cache_data = json.load(f)
+            vector_store_id = cache_data.get('vector_store_id')
+            if vector_store_id:
+                set_vector_store_id(vector_store_id)
+                print(f"[INIT] 캐시에서 vector_store_id 로드: {vector_store_id}")
+            else:
+                print("[INIT] 캐시에 vector_store_id 없음")
+                vector_store_id = None
+    else:
+        print("[INIT] 벡터스토어 캐시 파일 없음")
+        vector_store_id = None
 except Exception as e:
-    print(f"[INIT] vector store init failed: {e}")
+    print(f"[INIT] vector store cache load failed: {e}")
     vector_store_id = None
 
 # 버튼 상태 관리 함수들
@@ -183,7 +196,15 @@ def validate_and_update_api_key(api_key):
         # UI business logic에 API 키 저장
         import ui.business_logic as bl
         bl.current_api_key = api_key.strip()
-        return gr.update(value=f"✅ {message}"), gr.update(interactive=True)
+        
+        # 벡터스토어 확인 및 필요시 생성 (당신의 로직)
+        vs_id = ensure_vector_store_with_api_key(api_key.strip())
+        if vs_id:
+            status_msg = f"✅ {message} (벡터스토어: {vs_id[:20]}...)"
+        else:
+            status_msg = f"✅ {message} (벡터스토어 생성 실패)"
+        
+        return gr.update(value=status_msg), gr.update(interactive=True)
     else:
         return gr.update(value=f"❌ {message}"), gr.update(interactive=False)
 

@@ -9,10 +9,10 @@ Note: Throughout your reasoning, clearly distinguish between the structure of in
 Follow these steps in order:
 
 # Step 0. Understand the terms and definitions
-- Carefully read the document Agent2_Terms_and_definitions.md and ensure you agree with the definitions of the terms used.
+- Access and carefully read the reference document "Agent2_Terms_and_definitions.md" using the file_search tool and ensure you agree with the definitions of the terms used.
 
 # Step 1. Understand the IA structure heuristics
-- Thoroughly read the document Agent2_IA_heuristics.md, which contains heuristics derived from both HFE literature and practical UI/UX guidelines.
+- Access and thoroughly read the reference document "Agent2_IA_heuristics.md" using the file_search tool, which contains heuristics derived from both HFE literature and practical UI/UX guidelines.
 - Make sure you fully understand all seven heuristics before moving on.
 
 # Step 2. Wait for IA structure input
@@ -25,7 +25,7 @@ Follow these steps in order:
 # Step 3. Identify UX issues related to IA heuristics
 - Based on your understanding from Steps 0 to 2, perform a heuristic evaluation of the IA structure from the component level to the app level using the seven heuristics.
 - Identify all IA structure-related UX issues for each screen and UI component. Each element may have multiple issues.
-- Reference the relevant heuristics from Agent2_IA_heuristics.md to support your findings.
+- Reference the relevant heuristics from the Agent2_IA_heuristics.md content accessed via file_search to support your findings.
 - Remain objective and thorough when documenting issues. Include even minor ones.
 - Review the entire structure twice to ensure completeness.
 
