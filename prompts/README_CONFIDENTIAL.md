@@ -26,12 +26,6 @@
 - Monetary damages and injunctive relief
 - Criminal prosecution under applicable laws
 
-### 📞 CONTACT
-
-For permission requests or licensing inquiries:
-- **Seoul National University**: [연락처]
-- **CXI**: [연락처]
-
 ---
 
 **Copyright (c) 2024 Seoul National University & CXI - All Rights Reserved**

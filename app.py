@@ -242,6 +242,14 @@ def get_system_status():
     from ui.business_logic import current_images, current_base64_images, current_mode, current_api_key, api_key_timestamp, is_model_locked, get_current_model
     import time
     
+    # 🐛 디버그: API 키 상태 상세 출력
+    print(f"🐛 [DEBUG] current_api_key 존재: {bool(current_api_key)}")
+    if current_api_key:
+        print(f"🐛 [DEBUG] API 키 앞 10자: {current_api_key[:10]}...")
+        print(f"🐛 [DEBUG] API 키 설정 시간: {api_key_timestamp}")
+    else:
+        print(f"🐛 [DEBUG] API 키 없음 - 그런데 왜 작동하지??")
+    
     # 이미지 캐시 상태
     cached_images_count = len(current_images) if current_images else 0
     base64_status = "있음" if current_base64_images else "없음"
