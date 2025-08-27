@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 import datetime
 from openai import OpenAI
 
-from config import get_openai_client, DEFAULT_MODEL, VECTOR_INDEXING_WAIT_TIME
+from config import get_openai_client, DEFAULT_MODEL, VECTOR_INDEXING_WAIT_TIME, get_current_model
 
 
 class FinalReportAgent:
@@ -173,9 +173,10 @@ class FinalReportAgent:
             }
             input_messages.append(current_message)
 
-            # Responses API 호출 (file_search 활성화)
+            # Responses API 호출 (file_search 활성화) - 현재 선택된 모델 사용
+            current_model = get_current_model()
             response = self.client.responses.create(
-                model=self.model,
+                model=current_model,
                 input=input_messages,
                 tools=[{
                     "type": "file_search",

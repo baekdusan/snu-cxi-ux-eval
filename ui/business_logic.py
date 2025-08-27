@@ -4,6 +4,9 @@
 import os
 import json
 import datetime
+import time
+import atexit
+import tempfile
 from PIL import Image
 from typing import List, Dict, Any, Optional
 import gradio as gr
@@ -28,6 +31,20 @@ downloaded_files = []
 current_mode = "evaluation"
 final_report_agent = None
 current_api_key = None  # 사용자가 입력한 API 키
+api_key_timestamp = None  # API key 입력 시간 추적 (보안용)
+current_model = "gpt-4o"  # 현재 선택된 모델
+model_locked = False  # 모델 변경 잠금 상태
+
+# 🌟 환경 감지: Hugging Face Spaces 여부 확인
+def is_hugging_face_space():
+    """Hugging Face Spaces 환경인지 확인"""
+    return os.getenv("SPACE_ID") is not None or os.getenv("HUGGINGFACE_HUB_CACHE") is not None
+
+IS_HF_SPACE = is_hugging_face_space()
+if IS_HF_SPACE:
+    print("🌟 Hugging Face Spaces 환경 감지됨 - 클라우드 최적화 모드")
+else:
+    print("💻 로컬 환경 감지됨 - 로컬 파일 저장 모드")
 
 def set_vector_store_id(vs_id):
     global vector_store_id
@@ -94,8 +111,45 @@ def convert_files_to_images(files_input):
     
     return images
 
+def create_temp_file_for_download(result_data, result_type, agent_name, is_feedback=False, feedback_text=""):
+    """🌟 HF Spaces 호환: 임시 파일을 생성하여 다운로드 가능하게 함"""
+    try:
+        # 파일명 생성
+        agent_name_clean = agent_name.replace(' ', '_')
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{result_type}_{agent_name_clean}_{timestamp}.json"
+        
+        # JSON 데이터 구성
+        data = {
+            "agent_type": agent_name,
+            "timestamp": timestamp,
+            "is_feedback": is_feedback,
+            "feedback": feedback_text,
+            "result": result_data
+        }
+        
+        # 임시 파일 생성 (Gradio가 자동으로 정리함)
+        temp_file = tempfile.NamedTemporaryFile(
+            mode='w', 
+            suffix='.json', 
+            prefix=f"{result_type}_{agent_name_clean}_",
+            delete=False,
+            encoding='utf-8'
+        )
+        
+        json.dump(data, temp_file, ensure_ascii=False, indent=2)
+        temp_file.close()
+        
+        print(f"🌟 {result_type} 임시 파일 생성: {filename}")
+        return temp_file.name
+        
+    except Exception as e:
+        print(f"❌ {result_type} 임시 파일 생성 오류: {e}")
+        return None
+
+# 기존 함수는 호환성을 위해 유지 (로컬 개발용)
 def save_result_to_file(result_data, result_type, agent_name, is_feedback=False, feedback_text=""):
-    """결과를 파일로 저장하는 공통 함수"""
+    """결과를 파일로 저장하는 공통 함수 (로컬 개발용, 호환성 유지)"""
     try:
         # 저장할 디렉터리 결정
         if result_type == "dr_generation":
@@ -192,6 +246,10 @@ def run_dr_generation(images_input, selected_agent, user_feedback=""):
     """디자인 참조 생성 에이전트 실행"""
     global current_images, current_agent_name, current_base64_images, current_json_output, current_dr_agent, current_step, current_api_key
     
+    # 🔒 보안: API key 타임아웃 체크
+    if check_api_key_timeout():
+        return "🔒 보안: API key가 타임아웃되었습니다. 다시 입력해주세요."
+    
     # API 키 확인
     if not current_api_key:
         return "❌ OpenAI API 키를 먼저 입력해주세요."
@@ -218,6 +276,9 @@ def run_dr_generation(images_input, selected_agent, user_feedback=""):
         return "이미지 변환에 실패했습니다."
     
     try:
+        # 🤖 DR 생성 시작 시 모델 잠금
+        lock_model()
+        
         # 에이전트 재사용 또는 생성
         if current_dr_agent is None or current_agent_name != selected_agent:
             try:
@@ -276,6 +337,10 @@ def extract_json_from_result(result_text):
 def generate_evaluation(images_input, json_input, selected_agent, evaluation_feedback=""):
     """평가 에이전트 실행"""
     global current_images, current_base64_images, current_json_output, current_eval_agent, current_agent_name, current_step, current_evaluation_output, current_api_key
+    
+    # 🔒 보안: API key 타임아웃 체크
+    if check_api_key_timeout():
+        return "🔒 보안: API key가 타임아웃되었습니다. 다시 입력해주세요."
     
     # API 키 확인
     if not current_api_key:
@@ -367,7 +432,127 @@ def get_cache_status():
     base64_status = "있음" if current_base64_images else "없음"
     images_status = "있음" if current_images else "없음"
     mode_status = f"현재 모드: {current_mode}"
-    return f"캐시된 이미지: {cached_images_count}개 ({images_status})\\nBase64 이미지 캐시: {base64_status}\\n{mode_status}"
+    
+    # 🔒 보안: API key 상태 표시
+    api_status = "없음"
+    if current_api_key and api_key_timestamp:
+        elapsed_hours = (time.time() - api_key_timestamp) / 3600
+        if elapsed_hours < 2:  # 2시간 미만
+            api_status = f"있음 ({2 - elapsed_hours:.1f}시간 남음)"
+        else:
+            api_status = "타임아웃됨"
+    
+    return f"캐시된 이미지: {cached_images_count}개 ({images_status})\\nBase64 이미지 캐시: {base64_status}\\n{mode_status}\\n🔒 API key: {api_status}"
+
+# 모드 관리 함수들
+def get_current_mode():
+    """현재 모드 반환"""
+    return current_mode
+
+def set_current_mode(mode):
+    """현재 모드 설정"""
+    global current_mode
+    current_mode = mode
+
+# 🤖 모델 관리 함수들
+def get_current_model():
+    """현재 선택된 모델 반환"""
+    return current_model
+
+def set_current_model(model):
+    """현재 모델 설정 (잠금되지 않은 경우만)"""
+    global current_model, model_locked
+    
+    if model_locked:
+        print(f"⚠️ 모델 변경 잠금됨: 현재 세션에서는 {current_model} 고정")
+        return False, f"모델이 {current_model}로 잠금되어 있습니다. 세션을 초기화해야 변경 가능합니다."
+    
+    current_model = model
+    print(f"🤖 모델 변경: {model}")
+    return True, f"모델이 {model}로 변경되었습니다."
+
+def lock_model():
+    """모델 변경을 잠금 (DR 생성 시작 시 호출)"""
+    global model_locked
+    model_locked = True
+    print(f"🔒 모델 잠금: {current_model} 고정")
+
+def unlock_model():
+    """모델 변경 잠금 해제 (초기화 시 호출)"""
+    global model_locked
+    model_locked = False
+    print("🔓 모델 잠금 해제")
+
+def is_model_locked():
+    """모델이 잠금 상태인지 확인"""
+    return model_locked
+
+def set_api_key(api_key):
+    """🔒 보안: API key 설정 (타임스탬프와 함께)"""
+    global current_api_key, api_key_timestamp
+    current_api_key = api_key
+    api_key_timestamp = time.time()
+    print(f"🔒 API key 설정됨 (시간: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
+
+def check_api_key_timeout(timeout_hours=2):
+    """🔒 보안: API key 타임아웃 체크 (기본 2시간)"""
+    global current_api_key, api_key_timestamp
+    
+    if not current_api_key or not api_key_timestamp:
+        return False
+    
+    elapsed_hours = (time.time() - api_key_timestamp) / 3600
+    if elapsed_hours > timeout_hours:
+        print(f"🔒 보안: API key 타임아웃 ({elapsed_hours:.1f}시간 경과) - 자동 정리")
+        clear_api_key()
+        return True
+    return False
+
+def clear_api_key():
+    """🔒 보안: API key 완전 초기화"""
+    global current_api_key, api_key_timestamp, final_report_agent, current_dr_agent, current_eval_agent
+    
+    print("🔒 보안: API key 및 관련 에이전트 정리 시작...")
+    
+    # API key 초기화
+    current_api_key = None
+    api_key_timestamp = None
+    
+    # 🤖 모델 잠금 해제 (새 세션에서 모델 변경 가능)
+    unlock_model()
+    
+    # API key를 포함한 에이전트들 정리
+    if final_report_agent:
+        try:
+            final_report_agent.clear_all()
+        except Exception as e:
+            print(f"Final Report Agent 정리 오류: {e}")
+        final_report_agent = None
+    
+    if current_dr_agent:
+        try:
+            current_dr_agent.clear_json_cache()
+        except Exception as e:
+            print(f"DR Agent 정리 오류: {e}")
+        current_dr_agent = None
+    
+    if current_eval_agent:
+        try:
+            current_eval_agent.clear_json_cache()
+        except Exception as e:
+            print(f"Evaluator Agent 정리 오류: {e}")
+        current_eval_agent = None
+    
+    print("🔒 보안: API key 및 관련 에이전트 정리 완료")
+
+# 🔒 보안: 앱 종료 시 자동 정리
+def cleanup_on_exit():
+    """앱 종료 시 API key 자동 정리"""
+    print("🔒 보안: 앱 종료 - API key 자동 정리")
+    clear_api_key()
+
+# 종료 시 정리 함수 등록
+atexit.register(cleanup_on_exit)
 
 # Final Report 모드 관련 함수들
 def switch_to_final_report_mode():
@@ -478,7 +663,7 @@ def clear_final_report_chat():
     return [], "Final Report 대화가 초기화되었습니다."
 
 def download_evaluation_json():
-    """평가 결과를 JSON 파일로 다운로드"""
+    """🌟 HF Spaces 호환: 평가 결과를 JSON 파일로 다운로드"""
     global current_evaluation_output, current_agent_name, downloaded_files
     
     if not current_evaluation_output:
@@ -493,33 +678,55 @@ def download_evaluation_json():
         except:
             pass
         
-        actual_file_path = save_result_to_file(evaluation_result, "evaluation", current_agent_name, False, "")
-        
-        if actual_file_path and actual_file_path not in downloaded_files:
-            downloaded_files.append(actual_file_path)
-            print(f"새 파일 추가: {actual_file_path}")
-        
-        return downloaded_files
+        if IS_HF_SPACE:
+            # 🌟 HF Spaces: 임시 파일 생성으로 즉시 다운로드 가능
+            temp_file_path = create_temp_file_for_download(evaluation_result, "evaluation", current_agent_name, False, "")
+            
+            if temp_file_path:
+                # 다운로드 이력에 추가 (Final Report용)
+                if temp_file_path not in downloaded_files:
+                    downloaded_files.append(temp_file_path)
+                    print(f"🌟 새 평가 파일 준비 (HF Spaces): {current_agent_name}")
+                
+                return temp_file_path
+            else:
+                return None
+        else:
+            # 💻 로컬: 기존 방식 + 임시 파일 생성
+            saved_file_path = save_result_to_file(evaluation_result, "evaluation", current_agent_name, False, "")
+            temp_file_path = create_temp_file_for_download(evaluation_result, "evaluation", current_agent_name, False, "")
+            
+            if temp_file_path:
+                # 다운로드 이력에 추가 (Final Report용 - 로컬 파일 경로 사용)
+                if saved_file_path and saved_file_path not in downloaded_files:
+                    downloaded_files.append(saved_file_path)
+                    print(f"💻 새 평가 파일 준비 (로컬): {current_agent_name}")
+                
+                return temp_file_path
+            else:
+                return None
+            
     except Exception as e:
-        print(f"JSON 다운로드 파일 생성 오류: {e}")
+        print(f"❌ JSON 다운로드 파일 생성 오류: {e}")
         return None
 
 def save_discussion_dialog():
-    """Final Report 대화 내용을 파일로 저장"""
+    """🌟 HF Spaces 호환: Final Report 대화 내용을 파일로 다운로드"""
     global final_report_agent
     
     if not final_report_agent or not final_report_agent.conversation_history:
-        return "❌ 저장할 대화 내용이 없습니다."
+        return "❌ 저장할 대화 내용이 없습니다.", None
     
     try:
-        # 출력 디렉터리 생성
-        output_dir = "output/final_discussions"
-        os.makedirs(output_dir, exist_ok=True)
-        
         # 파일명 생성 (타임스탬프 포함)
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"final_discussion_{timestamp}.json"
-        file_path = os.path.join(output_dir, filename)
+        
+        # 💻 로컬 환경에서는 디렉터리에도 저장
+        if not IS_HF_SPACE:
+            output_dir = "output/final_discussions"
+            os.makedirs(output_dir, exist_ok=True)
+            file_path = os.path.join(output_dir, filename)
         
         # 대화 내용 구조화
         discussion_data = {
@@ -546,13 +753,28 @@ def save_discussion_dialog():
                     "content": content
                 })
         
-        # JSON 파일로 저장
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(discussion_data, f, ensure_ascii=False, indent=2)
+        # 💻 로컬 환경에서는 파일도 저장
+        if not IS_HF_SPACE:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(discussion_data, f, ensure_ascii=False, indent=2)
+            print(f"💻 로컬 대화 파일 저장: {file_path}")
         
-        print(f"대화 내용 저장 완료: {file_path}")
-        return f"✅ 대화 내용이 저장되었습니다: {filename}"
+        # 🌟 임시 파일 생성으로 즉시 다운로드 가능
+        temp_file = tempfile.NamedTemporaryFile(
+            mode='w', 
+            suffix='.json', 
+            prefix=f"final_discussion_{timestamp}_",
+            delete=False,
+            encoding='utf-8'
+        )
+        
+        json.dump(discussion_data, temp_file, ensure_ascii=False, indent=2)
+        temp_file.close()
+        
+        env_msg = "HF Spaces" if IS_HF_SPACE else "로컬"
+        print(f"🌟 대화 내용 파일 준비 ({env_msg}): {filename}")
+        return f"✅ 대화 내용이 준비되었습니다: {filename}", temp_file.name
         
     except Exception as e:
-        print(f"대화 내용 저장 오류: {e}")
-        return f"❌ 대화 내용 저장 중 오류 발생: {str(e)}"
+        print(f"❌ 대화 내용 파일 생성 오류: {e}")
+        return f"❌ 대화 내용 저장 실패: {str(e)}", None

@@ -4,7 +4,7 @@ from openai import OpenAI
 import re
 
 from prompts.prompt_loader import SimplePromptLoader
-from config import get_openai_client, DEFAULT_MODEL
+from config import get_openai_client, DEFAULT_MODEL, get_current_model
 
 
 class EvaluatorAgent:
@@ -88,11 +88,13 @@ class EvaluatorAgent:
             input_messages.append(current_message)
 
             # 5) Responses API 호출 (file_search 활성화 - 벡터스토어가 있을 때만)
-            kwargs = dict(model=DEFAULT_MODEL, input=input_messages)
+            current_model = get_current_model()
+            kwargs = dict(model=current_model, input=input_messages)
             if self.vector_store_id:
                 kwargs["tools"] = [{"type": "file_search", "vector_store_ids": [self.vector_store_id]}]
 
             response = self.client.responses.create(**kwargs)
+            print(f"🤖 Evaluation - 사용 모델: {current_model}")
 
             # 6) 응답 텍스트 추출
             response_content = getattr(response, "output_text", None)

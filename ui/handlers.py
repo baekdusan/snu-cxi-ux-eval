@@ -16,20 +16,8 @@ from agents.evaluator_agent import create_evaluator_agent
 from agents.final_report_agent import FinalReportAgent
 from utils import encode_images_to_base64
 
-# 전역 상태 변수들
-vector_store_id = None
-current_images = None
-current_json_data = None
-current_agent_name = None
-current_base64_images = None
-current_json_output = None
-current_evaluation_output = None
-current_dr_agent = None
-current_eval_agent = None
-current_step = "initial"
-downloaded_files = []
-current_mode = "evaluation"
-final_report_agent = None
+# business_logic의 전역 변수들을 임포트
+import ui.business_logic as bl
 
 def convert_files_to_images(files_input):
     """Gradio 파일 객체를 PIL Image로 변환"""
@@ -103,40 +91,31 @@ def save_result_to_file(result_data, result_type, agent_name, is_feedback=False,
         return False
 
 def get_cache_status():
-    """캐시 상태 정보 반환"""
-    global current_images, current_base64_images, current_mode
-    cached_images_count = len(current_images) if current_images else 0
-    base64_status = "있음" if current_base64_images else "없음"
-    images_status = "있음" if current_images else "없음"
-    mode_status = f"현재 모드: {current_mode}"
-    return f"캐시된 이미지: {cached_images_count}개 ({images_status})\\nBase64 이미지 캐시: {base64_status}\\n{mode_status}"
+    """캐시 상태 정보 반환 - business_logic에서 처리"""
+    return bl.get_cache_status()
 
-# 상태 설정 함수들
+# 상태 설정 함수들 - business_logic의 변수들을 사용
 def set_vector_store_id(vs_id):
-    global vector_store_id
-    vector_store_id = vs_id
+    bl.vector_store_id = vs_id
 
 def get_vector_store_id():
-    return vector_store_id
+    return bl.vector_store_id
 
 def get_downloaded_files():
-    return downloaded_files
+    return bl.downloaded_files
 
 def add_downloaded_file(file_path):
-    global downloaded_files
-    if file_path and file_path not in downloaded_files:
-        downloaded_files.append(file_path)
+    if file_path and file_path not in bl.downloaded_files:
+        bl.downloaded_files.append(file_path)
 
 def get_current_mode():
-    return current_mode
+    return bl.get_current_mode()
 
 def set_current_mode(mode):
-    global current_mode
-    current_mode = mode
+    bl.set_current_mode(mode)
 
 def get_final_report_agent():
-    return final_report_agent
+    return bl.final_report_agent
 
 def set_final_report_agent(agent):
-    global final_report_agent
-    final_report_agent = agent
+    bl.final_report_agent = agent

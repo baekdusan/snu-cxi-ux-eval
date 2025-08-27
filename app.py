@@ -7,7 +7,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="gradio")
 import os
 import gradio as gr
 from prompts.prompt_loader import SimplePromptLoader
-from config import validate_api_key
+from config import validate_api_key, AVAILABLE_MODELS
 
 # UI 모듈 임포트
 from ui.components import (
@@ -48,10 +48,26 @@ except Exception as e:
 # 버튼 상태 관리 함수들
 def get_button_states():
     """현재 단계에 따른 버튼 상태 반환"""
-    from ui.business_logic import current_step
+    from ui.business_logic import current_step, is_model_locked, get_current_model
+    
+    # 🤖 모델 잠금 상태 반영
+    model_locked = is_model_locked()
+    current_model = get_current_model()
+    
+    # 모델 드롭다운 라벨 동적 변경
+    if model_locked:
+        model_label = f"🤖 {current_model} 🔒"
+    else:
+        model_label = "🤖 모델 선택"
+    
+    base_states = {
+        "model_dropdown": not model_locked,
+        "model_label": model_label
+    }
     
     if current_step == "initial":
         return {
+            **base_states,
             "agent_dropdown": True, "initial_extract_btn": True,
             "feedback_extract_btn": False, "confirm_dr_btn": False,
             "guideline_btn": False, "evaluation_feedback_btn": False,
@@ -59,6 +75,7 @@ def get_button_states():
         }
     elif current_step in ["generated", "feedback"]:
         return {
+            **base_states,
             "agent_dropdown": False, "initial_extract_btn": False,
             "feedback_extract_btn": True, "confirm_dr_btn": True,
             "guideline_btn": False, "evaluation_feedback_btn": False,
@@ -66,6 +83,7 @@ def get_button_states():
         }
     elif current_step == "evaluated":
         return {
+            **base_states,
             "agent_dropdown": False, "initial_extract_btn": False,
             "feedback_extract_btn": False, "confirm_dr_btn": False,
             "guideline_btn": True, "evaluation_feedback_btn": True,
@@ -73,6 +91,7 @@ def get_button_states():
         }
     else:
         return {
+            **base_states,
             "agent_dropdown": True, "initial_extract_btn": True,
             "feedback_extract_btn": False, "confirm_dr_btn": False,
             "guideline_btn": False, "evaluation_feedback_btn": False,
@@ -89,7 +108,8 @@ def update_button_states():
         gr.update(interactive=states["confirm_dr_btn"]),
         gr.update(interactive=states["guideline_btn"]),
         gr.update(interactive=states["evaluation_feedback_btn"]),
-        gr.update(interactive=states["download_btn"])
+        gr.update(interactive=states["download_btn"]),
+        gr.update(interactive=states["model_dropdown"], label=states["model_label"])  # 🤖 모델 드롭다운 상태 + 라벨
     )
 
 def check_json_and_update_confirm_btn(json_input):
@@ -135,7 +155,10 @@ def clear_conversation():
     bl.current_eval_agent = None
     bl.current_step = "initial"
     
-    print("=== 모든 캐시 완전 초기화 ===")
+    # 🔒 보안: API key 완전 초기화 (Hugging Face 등 공유 환경에서 중요)
+    bl.clear_api_key()
+    
+    print("=== 모든 캐시 및 API key 완전 초기화 (보안) ===")
     return "", [], "", "", "", gr.update(visible=False), gr.update(interactive=True)
 
 def on_agent_change(selected_agent):
@@ -187,48 +210,129 @@ def check_final_report_btn():
 
 def validate_and_update_api_key(api_key):
     """API 키 유효성 검증 및 상태 업데이트"""
+    import ui.business_logic as bl
+    
     if not api_key.strip():
-        return gr.update(value="⚠️ API 키를 입력해주세요"), gr.update(interactive=False)
+        # 🔒 보안: 빈 키 입력 시 기존 API 키 완전 정리
+        bl.clear_api_key()
+        return gr.update(interactive=False)
     
     is_valid, message = validate_api_key(api_key.strip())
     
     if is_valid:
-        # UI business logic에 API 키 저장
-        import ui.business_logic as bl
-        bl.current_api_key = api_key.strip()
+        # 🔒 보안: API 키를 안전하게 저장 (타임스탬프와 함께)
+        bl.set_api_key(api_key.strip())
         
-        # 벡터스토어 확인 및 필요시 생성 (당신의 로직)
+        # 벡터스토어 확인 및 필요시 생성
         vs_id = ensure_vector_store_with_api_key(api_key.strip())
         if vs_id:
-            status_msg = f"✅ {message} (벡터스토어: {vs_id[:20]}...)"
+            print(f"✅ API 키 유효 (벡터스토어: {vs_id[:20]}...)")
         else:
-            status_msg = f"✅ {message} (벡터스토어 생성 실패)"
+            print("✅ API 키 유효 (벡터스토어 생성 실패)")
         
-        return gr.update(value=status_msg), gr.update(interactive=True)
+        return gr.update(interactive=True)
     else:
-        return gr.update(value=f"❌ {message}"), gr.update(interactive=False)
+        # 🔒 보안: 잘못된 키 입력 시 기존 API 키 완전 정리
+        print(f"❌ API 키 검증 실패: {message}")
+        bl.clear_api_key()
+        return gr.update(interactive=False)
 
-# Gradio 인터페이스 정의
+def get_system_status():
+    """📊 종합 시스템 상태 반환 (API + 캐시 + 모드)"""
+    from ui.business_logic import current_images, current_base64_images, current_mode, current_api_key, api_key_timestamp, is_model_locked, get_current_model
+    import time
+    
+    # 이미지 캐시 상태
+    cached_images_count = len(current_images) if current_images else 0
+    base64_status = "있음" if current_base64_images else "없음"
+    images_status = "있음" if current_images else "없음"
+    
+    # API 키 상태
+    if current_api_key and api_key_timestamp:
+        elapsed_hours = (time.time() - api_key_timestamp) / 3600
+        if elapsed_hours < 2:  # 2시간 미만
+            api_status = f"✅ 인증됨 ({2 - elapsed_hours:.1f}시간 남음)"
+        else:
+            api_status = "⏰ 타임아웃됨"
+    else:
+        api_status = "❌ 미인증"
+    
+    # 모델 상태
+    current_model = get_current_model()
+    if is_model_locked():
+        model_status = f"🔒 {current_model} (잠금됨)"
+    else:
+        model_status = f"🤖 {current_model}"
+    
+    # 현재 모드
+    mode_status = f"📍 {current_mode} 모드"
+    
+    status_text = f"🔑 API: {api_status}\n{model_status}\n{mode_status}\n📁 이미지 캐시: {cached_images_count}개 ({images_status}), Base64: {base64_status}"
+    
+    return status_text
+
+def update_model_selection(selected_model):
+    """🤖 모델 선택 업데이트"""
+    import ui.business_logic as bl
+    
+    success, message = bl.set_current_model(selected_model)
+    
+    if success:
+        print(f"🤖 {message}")
+        return gr.update()  # 변경 없음 (성공 시)
+    else:
+        print(f"⚠️ {message}")
+        # 잠금된 경우 이전 모델로 되돌리기
+        current = bl.get_current_model()
+        return gr.update(value=current)
+
+# 🔒 보안: Hugging Face Spaces에서 앱 시작 시 모든 상태 초기화
+print("🔒 보안: 앱 시작 - 모든 상태 초기화")
+import ui.business_logic as bl
+bl.clear_api_key()
+
+# Gradio 인터페이스 정의  
 demo = gr.Blocks(theme=gr.themes.Soft(), title="[SNU x CXI] Mobile App UX Evaluation System")
 
 with demo:
-    gr.Markdown("# [SNU x CXI] Mobile App UX Evaluation System")
-    gr.Markdown("스크린샷을 업로드하고 평가 모듈을 선택하세요!")
-
+    # 🎨 헤더 섹션 (타이틀 + API 설정 + 모델 선택)
     with gr.Row():
+        with gr.Column(scale=4):
+            gr.Markdown("# [SNU x CXI] Mobile App UX Evaluation System")
+            gr.Markdown("스크린샷을 업로드하고 평가 모듈을 선택하세요!")
         with gr.Column(scale=1):
-            # API 키 입력 섹션
-            # gr.Markdown("### 🔑 OpenAI API 키 입력")
+            # 🔑 API 설정 섹션 (헤더에 배치)
             api_key_input = gr.Textbox(
                 label="OpenAI API Key", 
                 type="password",
                 placeholder="sk-...",
             )
-            api_key_status = gr.Textbox(
-                label="상태",
-                value="⚠️ API 키를 입력해주세요",
-                interactive=False
+
+        with gr.Column(scale=1):
+            model_dropdown = gr.Dropdown(
+                choices=AVAILABLE_MODELS,
+                value="gpt-4o",
+                label="🤖 모델 선택",
+                interactive=True
             )
+
+    with gr.Row():
+        with gr.Column(scale=1):
+            # 📊 종합 시스템 모니터링 (맨 위 배치)
+            system_status = gr.Textbox(
+                label="📊 시스템 상태",
+                value="시스템 초기화 중...",
+                interactive=False,
+                lines=4
+            )
+            
+            # 시스템 제어 버튼들
+            with gr.Row():
+                cache_status_btn = gr.Button("상태 새로고침", variant="secondary")
+                clear_btn = gr.Button("초기화", variant="stop", interactive=True)
+            
+            # 초기화 확인 다이얼로그
+            clear_confirm_row, clear_confirm_text, clear_confirm_btn, clear_cancel_btn = create_clear_confirm_dialog()            
             
             # 이미지 업로드 및 에이전트 선택
             images_input, image_preview = create_image_upload_section()
@@ -237,16 +341,7 @@ with demo:
             # DR 생성 버튼
             initial_extract_btn = gr.Button("📋 DR 생성", variant="primary", interactive=False)
             
-            # 캐시 상태 표시 박스
-            cache_status = create_cache_status_display()
-            
-            # 나머지 제어 버튼들 
-            with gr.Row():
-                cache_status_btn = gr.Button("캐시 상태 조회", variant="secondary")
-                clear_btn = gr.Button("초기화", variant="stop", interactive=True)
-            
-            # 초기화 확인 다이얼로그
-            clear_confirm_row, clear_confirm_text, clear_confirm_btn, clear_cancel_btn = create_clear_confirm_dialog()
+
 
         # 메인 작업 영역
         with gr.Column(scale=4):
@@ -265,11 +360,24 @@ with demo:
             final_report_btn = gr.Button("🚀 최종 평가 결과 논의 시작", variant="primary", interactive=False, size="lg")
 
     # 이벤트 연결
-    # API 키 검증
+    # API 키 검증 (시스템 상태 및 버튼 상태 업데이트)
     api_key_input.change(
         fn=validate_and_update_api_key,
         inputs=[api_key_input],
-        outputs=[api_key_status, initial_extract_btn]
+        outputs=[initial_extract_btn]
+    ).then(
+        fn=update_button_states,
+        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, clear_btn, model_dropdown]
+    ).then(
+        fn=get_system_status,
+        outputs=[system_status]
+    )
+    
+    # 🤖 모델 선택 (잠금 시 이전 값으로 되돌림)
+    model_dropdown.change(
+        fn=update_model_selection,
+        inputs=[model_dropdown],
+        outputs=[model_dropdown]
     )
     
     # 이미지 업로드
@@ -286,7 +394,7 @@ with demo:
         outputs=[json_output]
     ).then(
         fn=update_button_states,
-        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn]
+        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, model_dropdown]
     )
     
     # DR 피드백 반영
@@ -299,7 +407,7 @@ with demo:
         outputs=[user_feedback]
     ).then(
         fn=update_button_states,
-        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn]
+        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, model_dropdown]
     )
     
     # DR 확정 및 평가 생성
@@ -313,7 +421,7 @@ with demo:
         outputs=[guideline_output]
     ).then(
         fn=update_button_states,
-        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn]
+        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, model_dropdown]
     )
     
     # 평가 피드백 반영
@@ -326,7 +434,7 @@ with demo:
         outputs=[evaluation_feedback]
     ).then(
         fn=update_button_states,
-        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn]
+        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, model_dropdown]
     )
     
     # 다운로드
@@ -348,7 +456,7 @@ with demo:
         outputs=[json_output, guideline_output]
     ).then(
         fn=update_button_states,
-        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn]
+        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, model_dropdown]
     )
     
     # JSON 변경 시 DR 확정 버튼 업데이트
@@ -365,17 +473,20 @@ with demo:
         outputs=[json_output, image_preview, user_feedback, guideline_output, evaluation_feedback, clear_confirm_row, json_output]
     ).then(
         fn=update_button_states,
-        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, clear_btn]
+        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, clear_btn, model_dropdown]
+    ).then(
+        fn=get_system_status,
+        outputs=[system_status]
     )
     clear_cancel_btn.click(fn=hide_clear_confirm, outputs=[clear_confirm_row])
     
-    # 캐시 상태 조회
-    cache_status_btn.click(fn=get_cache_status, outputs=[cache_status])
+    # 📊 시스템 상태 새로고침
+    cache_status_btn.click(fn=get_system_status, outputs=[system_status])
     
     # Final Report 모드 전환
     final_report_btn.click(
         fn=switch_to_final_report_mode,
-        outputs=[cache_status, evaluation_mode, final_report_mode, final_report_chat, final_report_input, final_report_send_btn, back_to_evaluation_btn, save_discussion_btn]
+        outputs=[system_status, evaluation_mode, final_report_mode, final_report_chat, final_report_input, final_report_send_btn, back_to_evaluation_btn, save_discussion_btn]
     )
     
     # Final Report 메시지 전송
@@ -390,34 +501,31 @@ with demo:
         outputs=[final_report_chat, final_report_input]
     )
     
-    # 대화 내용 저장
+    # 🌟 대화 내용 저장 (HF Spaces 호환)
     save_discussion_btn.click(
         fn=save_discussion_dialog,
-        outputs=[cache_status]
+        outputs=[system_status, gr.File(label="Final Report 대화 내용 다운로드")]
     )
     
     # 평가 모드로 돌아가기
     back_to_evaluation_btn.click(
         fn=switch_to_evaluation_mode,
-        outputs=[cache_status, evaluation_mode, final_report_mode, final_report_chat, final_report_input, final_report_send_btn, back_to_evaluation_btn, save_discussion_btn]
+        outputs=[system_status, evaluation_mode, final_report_mode, final_report_chat, final_report_input, final_report_send_btn, back_to_evaluation_btn, save_discussion_btn]
     )
     
     # 대화 초기화
     clear_chat_btn.click(
         fn=clear_final_report_chat,
-        outputs=[final_report_chat, cache_status]
+        outputs=[final_report_chat, system_status]
     )
     
     # 초기 상태 설정
-    demo.load(fn=get_cache_status, outputs=[cache_status])
+    demo.load(fn=get_system_status, outputs=[system_status])
     demo.load(
-        fn=lambda: (
-            gr.update(interactive=True), gr.update(interactive=True), 
-            gr.update(interactive=False), gr.update(interactive=False),
-            gr.update(interactive=False), gr.update(interactive=False)
-        ),
-        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn]
+        fn=update_button_states,
+        outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, clear_btn, model_dropdown]
     )
+
     
     # 드롭다운 기본값과 current_agent_name 동기화
     demo.load(
