@@ -152,4 +152,7 @@ flagged/
 # API Keys and secrets
 *api_key*
 *secret*
-*token* 
+*token*
+
+# Documentation images (GitHub only, not for HF Spaces)
+image.png 
