@@ -155,4 +155,7 @@ flagged/
 *token*
 
 # Documentation images (now handled by Git LFS)
-# image.png 
+# image.png
+
+# 🔒 민감한 연구 자료는 유지하되 GitHub에서 대중 공개는 제한
+# (Hugging Face 동기화용으로는 필요함) 

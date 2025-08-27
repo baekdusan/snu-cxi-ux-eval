@@ -137,23 +137,6 @@ python app.py
 - AI와 대화를 통해 종합적인 개선 방안 논의
 - 💾 대화 내용을 JSON 파일로 저장 가능
 
-### 🎨 UI 구성 요소
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 📋 [SNU x CXI] Mobile App UX Evaluation System             │
-│                                    [🔑 API Key] [🤖 Model] │
-├─────────────────────────────────────────────────────────────┤
-│ 📊 시스템 상태              │ 📱 이미지 업로드 및 결과      │
-│ [상태 새로고침] [초기화]     │                             │
-│                            │ 💬 피드백 입력               │
-│ 📱 이미지 업로드            │                             │
-│ 🎯 평가 모듈 선택           │ 📊 평가 결과                 │
-│ 📋 DR 생성                │                             │
-│                            │ 🚀 최종 논의                │
-└─────────────────────────────────────────────────────────────┘
-```
-
 ---
 
 ## 🔧 시스템 구성
@@ -255,15 +238,39 @@ graph TD
 
 ---
 
-## 📄 라이선스 및 저작권
+## ⚠️ 연구 자료 보호 및 사용 제한
 
+### 🔒 **민감한 연구 자료**
+- **`prompts/` 폴더**: AI 에이전트 프롬프트 (연구 기밀)
+- **`references/` 폴더**: UX 평가 휴리스틱 및 가이드라인 (연구 자산)
+
+### 📋 **사용 제한 조항**
+1. **연구 목적 전용**: 위 자료들은 순수 연구 목적으로만 사용 가능
+2. **무단 복제 금지**: 프롬프트 및 레퍼런스 파일의 무단 복제, 재배포 엄격 금지
+3. **상업적 사용 금지**: 해당 자료들의 상업적 활용 및 수익 창출 목적 사용 금지
+4. **인용 의무**: 연구 활용 시 반드시 출처 명시 필요
+
+### ⚖️ **법적 보호**
 ```
-Copyright (c) 2024 Seoul National University & CXI
+Copyright (c) 2024 Seoul National University (SNU) & CXI
 All rights reserved.
 
-이 소프트웨어는 서울대학교와 CXI의 공동 연구 성과물입니다.
-상업적 사용 시 사전 협의가 필요합니다.
+PROPRIETARY AND CONFIDENTIAL RESEARCH MATERIALS
+
+The AI prompts, evaluation heuristics, and reference materials 
+contained in this repository are proprietary research assets 
+developed by Seoul National University and CXI.
+
+UNAUTHORIZED USE, REPRODUCTION, OR DISTRIBUTION IS STRICTLY PROHIBITED
+AND MAY RESULT IN LEGAL ACTION.
 ```
+
+## 📄 라이선스 및 저작권
+
+**이 소프트웨어는 서울대학교와 CXI의 공동 연구 성과물입니다.**
+- **오픈소스**: 앱 코드는 연구 및 교육 목적으로 공개
+- **연구 자료 보호**: 프롬프트 및 평가 기준은 지적재산권 보호 대상
+- **상업적 사용**: 사전 서면 협의 필수
 
 ---
 

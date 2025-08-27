@@ -1,0 +1,77 @@
+SNU-CXI UX Evaluation System License
+
+Copyright (c) 2024 Seoul National University (SNU) & CXI
+All rights reserved.
+
+=============================================================================
+DUAL LICENSE AGREEMENT
+=============================================================================
+
+This repository contains two types of materials with different licensing terms:
+
+1. APPLICATION CODE LICENSE (Open Research License)
+   - Files: All Python code, UI components, configuration files
+   - License: MIT-style license for research and educational use
+   - Permission: Research, education, non-commercial use
+   - Restriction: Commercial use requires written permission
+
+2. RESEARCH MATERIALS LICENSE (Proprietary & Confidential)
+   - Files: prompts/ folder, references/ folder, and related materials
+   - License: Proprietary research assets
+   - Permission: View only for research understanding
+   - Restriction: STRICTLY PROHIBITED to copy, modify, distribute, or use
+
+=============================================================================
+RESEARCH MATERIALS - PROPRIETARY LICENSE
+=============================================================================
+
+The following materials are PROPRIETARY AND CONFIDENTIAL:
+- AI agent prompts (prompts/ directory)
+- UX evaluation heuristics (references/ directory)
+- Evaluation criteria and methodologies
+- Research methodologies and frameworks
+
+THESE MATERIALS ARE PROTECTED BY COPYRIGHT AND TRADE SECRET LAWS.
+
+UNAUTHORIZED USE, REPRODUCTION, DISTRIBUTION, OR DERIVATIVE WORKS
+OF THESE MATERIALS IS STRICTLY PROHIBITED AND MAY RESULT IN:
+- Criminal prosecution
+- Civil liability
+- Monetary damages
+- Injunctive relief
+
+=============================================================================
+APPLICATION CODE - RESEARCH LICENSE
+=============================================================================
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of the application software (excluding proprietary research materials) for
+research and educational purposes, subject to the following conditions:
+
+1. The above copyright notice and this permission notice shall be included
+   in all copies or substantial portions of the Software.
+
+2. Commercial use, sale, or licensing requires prior written permission
+   from Seoul National University and CXI.
+
+3. Any research publication using this software must cite:
+   "[SNU x CXI] Mobile App UX Evaluation System"
+   Seoul National University & CXI, 2024
+
+=============================================================================
+DISCLAIMER
+=============================================================================
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+=============================================================================
+CONTACT INFORMATION
+=============================================================================
+
+Last Updated: 2024-08-27
