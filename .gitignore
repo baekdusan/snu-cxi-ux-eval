@@ -154,5 +154,5 @@ flagged/
 *secret*
 *token*
 
-# Documentation images (GitHub only, not for HF Spaces)
-image.png 
+# Documentation images (now handled by Git LFS)
+# image.png 
