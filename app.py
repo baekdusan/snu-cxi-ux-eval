@@ -271,8 +271,12 @@ def get_system_status():
     else:
         model_status = f"🤖 {current_model}"
     
-    # 현재 모드
-    mode_status = f"📍 {current_mode} 모드"
+    # 현재 모드 (사용자 친화적 표시)
+    mode_display = {
+        "evaluation": "평가",
+        "final_report": "종합 챗봇"
+    }.get(current_mode, current_mode)
+    mode_status = f"📍 {mode_display} 모드"
     
     status_text = f"🔑 API: {api_status}\n{model_status}\n{mode_status}\n📁 이미지 캐시: {cached_images_count}개 ({images_status}), Base64: {base64_status}"
     
@@ -364,7 +368,7 @@ with demo:
              final_report_send_btn, back_to_evaluation_btn, save_discussion_btn, clear_chat_btn) = final_report_components
             
             # 최종 논의 시작 버튼 (모든 평가 완료 후)
-            final_report_btn = gr.Button("🚀 최종 평가 결과 논의 시작", variant="primary", interactive=False, size="lg")
+            final_report_btn = gr.Button("🚀 종합 챗봇과 대화 시작", variant="primary", interactive=False, size="lg")
 
     # 이벤트 연결
     # API 키 검증 (시스템 상태 및 버튼 상태 업데이트)
@@ -511,7 +515,7 @@ with demo:
     # 🌟 대화 내용 저장 (HF Spaces 호환)
     save_discussion_btn.click(
         fn=save_discussion_dialog,
-        outputs=[system_status, gr.File(label="Final Report 대화 내용 다운로드")]
+        outputs=[system_status, gr.File(label="종합 챗봇 대화 내용 다운로드")]
     )
     
     # 평가 모드로 돌아가기

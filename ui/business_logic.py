@@ -630,18 +630,18 @@ def switch_to_final_report_mode():
         
         # 평가 파일들로 Agent 초기화
         initialization_result = final_report_agent.initialize_with_files(downloaded_files)
-        current_mode = "final_report"
+        current_mode = "comprehensive_chatbot"
         
         # 챗봇의 첫 환영 메시지 
         welcome_message = """안녕하세요! 👋
 
-**Final Report Agent**입니다. 평가 결과를 바탕으로 자유롭게 질문해주세요.
+**평가 모듈별 결과를 종합하여 심층 분석을 지원하는 챗봇**입니다. 평가 결과를 바탕으로 자유롭게 질문해주세요.
 
-📊 **분석 가능한 내용**:
+📊 **분석 예시**:
 • 가장 심각한 UX 문제점
 • 우선순위별 개선 사항  
 • 각 평가 모듈별 주요 발견사항
-• 구체적인 개선 방향 제시
+• 평가 모듈별 결과간 인과관계 또는 상충관계
 
 💬 **어떤 것이 궁금하신가요?**"""
 
@@ -685,14 +685,14 @@ def switch_to_evaluation_mode():
     )
 
 def send_final_report_message(user_message, current_chat_history=None):
-    """Final Report Agent와 대화"""
+    """종합 챗봇과 대화"""
     global final_report_agent
     
     if current_chat_history is None:
         current_chat_history = []
     
     if not final_report_agent:
-        current_chat_history.append((user_message, "❌ Final Report Agent가 초기화되지 않았습니다."))
+        current_chat_history.append((user_message, "❌ 종합 챗봇이 초기화되지 않았습니다."))
         return current_chat_history, ""
     
     if not user_message.strip():
@@ -709,11 +709,11 @@ def send_final_report_message(user_message, current_chat_history=None):
         return current_chat_history, ""
 
 def clear_final_report_chat():
-    """Final Report 대화 초기화"""
+    """종합 챗봇 대화 초기화"""
     global final_report_agent
     if final_report_agent:
         final_report_agent.reset_conversation()
-    return [], "Final Report 대화가 초기화되었습니다."
+    return [], "종합 챗봇 대화가 초기화되었습니다."
 
 def download_evaluation_json():
     """🌟 HF Spaces 호환: 평가 결과를 JSON 파일로 다운로드"""
@@ -764,7 +764,7 @@ def download_evaluation_json():
         return None
 
 def save_discussion_dialog():
-    """🌟 HF Spaces 호환: Final Report 대화 내용을 파일로 다운로드"""
+    """🌟 HF Spaces 호환: 종합 챗봇 대화 내용을 파일로 다운로드"""
     global final_report_agent
     
     if not final_report_agent or not final_report_agent.conversation_history:

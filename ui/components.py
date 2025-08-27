@@ -137,7 +137,7 @@ def create_final_report_mode():
         with gr.Column():
             # 채팅 영역 (챗봇 UI)
             final_report_chat = gr.Chatbot(
-                label="💬 Final Summary & Discussion",
+                label="💬 Summary & Discussion",
                 show_share_button=True,
                 show_copy_button=True,
                 bubble_full_width=False,
