@@ -16,11 +16,64 @@ from agents.evaluator_agent import create_evaluator_agent
 from agents.final_report_agent import FinalReportAgent
 from utils import encode_images_to_base64
 
-# 전역 상태 변수들
+# 🔒 세션 기반 상태 관리 (보안 강화)
+session_data = {}  # 세션별 데이터 저장
+
+# 전역 상태 변수들 (세션 무관)
 vector_store_id = None
+
+# 기본값들
+DEFAULT_AGENT_NAME = "Text Legibility"
+DEFAULT_MODE = "evaluation"
+DEFAULT_MODEL = "gpt-4o"
+
+def get_session_id():
+    """현재 Gradio 세션 ID 가져오기"""
+    try:
+        import gradio as gr
+        # Gradio의 현재 세션 정보를 가져오는 방법이 제한적이므로
+        # 임시로 요청 기반 식별자 사용
+        import time
+        import hashlib
+        
+        # 현재 시간 기반 세션 식별 (임시 방법)
+        # 실제로는 Gradio의 세션 관리 API를 사용해야 함
+        current_time = str(time.time())
+        session_id = hashlib.md5(current_time.encode()).hexdigest()[:8]
+        return f"session_{session_id}"
+    except:
+        return "default_session"
+
+def init_session_data(session_id=None):
+    """세션 데이터 초기화"""
+    if session_id is None:
+        session_id = get_session_id()
+    
+    if session_id not in session_data:
+        session_data[session_id] = {
+            'current_images': None,
+            'current_json_data': None,
+            'current_agent_name': DEFAULT_AGENT_NAME,
+            'current_base64_images': None,
+            'current_json_output': None,
+            'current_evaluation_output': None,
+            'current_dr_agent': None,
+            'current_eval_agent': None,
+            'current_step': "initial",
+            'downloaded_files': [],
+            'current_mode': DEFAULT_MODE,
+            'final_report_agent': None,
+            'current_api_key': None,
+            'api_key_timestamp': None,
+            'current_model': DEFAULT_MODEL,
+            'model_locked': False
+        }
+    return session_id
+
+# 호환성을 위한 전역 변수들 (기본 세션 사용)
 current_images = None
 current_json_data = None
-current_agent_name = "Text Legibility"  # 기본값을 드롭다운과 일치시킴
+current_agent_name = DEFAULT_AGENT_NAME
 current_base64_images = None
 current_json_output = None
 current_evaluation_output = None
@@ -28,11 +81,11 @@ current_dr_agent = None
 current_eval_agent = None
 current_step = "initial"
 downloaded_files = []
-current_mode = "evaluation"
+current_mode = DEFAULT_MODE
 final_report_agent = None
 current_api_key = None  # 사용자가 입력한 API 키
 api_key_timestamp = None  # API key 입력 시간 추적 (보안용)
-current_model = "gpt-4o"  # 현재 선택된 모델
+current_model = DEFAULT_MODEL  # 현재 선택된 모델
 model_locked = False  # 모델 변경 잠금 상태
 
 # 🌟 환경 감지: Hugging Face Spaces 여부 확인

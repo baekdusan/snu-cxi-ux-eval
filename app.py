@@ -533,6 +533,12 @@ with demo:
         fn=update_button_states,
         outputs=[agent_dropdown, initial_extract_btn, feedback_extract_btn, confirm_dr_btn, evaluation_feedback_btn, download_btn, clear_btn, model_dropdown]
     )
+    
+    # 🔒 보안: 브라우저 새로고침 시 API 키 정리 (F5 보안 문제 해결)
+    demo.load(
+        fn=lambda: bl.clear_api_key() or "",
+        outputs=[]
+    )
 
     
     # 드롭다운 기본값과 current_agent_name 동기화
