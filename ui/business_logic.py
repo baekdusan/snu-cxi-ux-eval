@@ -304,9 +304,6 @@ def run_dr_generation(images_input, selected_agent, user_feedback=""):
         return "🔒 보안: API key가 타임아웃되었습니다. 다시 입력해주세요."
     
     # API 키 확인
-    print(f"🐛 [DEBUG] generate_evaluation - current_api_key: {bool(current_api_key)}")
-    if current_api_key:
-        print(f"🐛 [DEBUG] API 키 앞 10자: {current_api_key[:10]}...")
     if not current_api_key:
         return "❌ OpenAI API 키를 먼저 입력해주세요."
     
@@ -399,9 +396,6 @@ def generate_evaluation(images_input, json_input, selected_agent, evaluation_fee
         return "🔒 보안: API key가 타임아웃되었습니다. 다시 입력해주세요."
     
     # API 키 확인
-    print(f"🐛 [DEBUG] generate_evaluation - current_api_key: {bool(current_api_key)}")
-    if current_api_key:
-        print(f"🐛 [DEBUG] API 키 앞 10자: {current_api_key[:10]}...")
     if not current_api_key:
         return "❌ OpenAI API 키를 먼저 입력해주세요."
     

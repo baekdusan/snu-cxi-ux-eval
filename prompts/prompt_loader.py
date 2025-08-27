@@ -28,12 +28,8 @@ class SimplePromptLoader:
         self.refs_dir = Path("references/")  # 루트 레벨 references 폴더
         self.cache_file = Path(".vector_store_cache.json")  # 벡터스토어 캐시 파일
         
-        # OpenAI 클라이언트 초기화 (환경변수가 있을 때만 시도)
-        try:
-            self.client = get_openai_client()
-        except ValueError:
-            self.client = None
-            print("경고: OPENAI_API_KEY가 설정되지 않았습니다. 벡터스토어 기능을 사용할 수 없습니다.")
+        # OpenAI 클라이언트 초기화 (동적으로 설정됨)
+        self.client = None  # API 키 입력 시 동적으로 설정
         
         # 에이전트별 참조 문서 매핑 (벡터스토어용)
         self.reference_mapping = {

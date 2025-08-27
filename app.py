@@ -241,14 +241,13 @@ def get_system_status():
     """📊 종합 시스템 상태 반환 (API + 캐시 + 모드)"""
     from ui.business_logic import current_images, current_base64_images, current_mode, current_api_key, api_key_timestamp, is_model_locked, get_current_model
     import time
+    import datetime
     
-    # 🐛 디버그: API 키 상태 상세 출력
-    print(f"🐛 [DEBUG] current_api_key 존재: {bool(current_api_key)}")
+    # API 키 상태 체크 (조용한 확인)
     if current_api_key:
-        print(f"🐛 [DEBUG] API 키 앞 10자: {current_api_key[:10]}...")
-        print(f"🐛 [DEBUG] API 키 설정 시간: {api_key_timestamp}")
+        print(f"✅ API 키 활성: {current_api_key[:10]}... ({datetime.datetime.fromtimestamp(api_key_timestamp).strftime('%H:%M:%S')})")
     else:
-        print(f"🐛 [DEBUG] API 키 없음 - 그런데 왜 작동하지??")
+        print("⚠️ API 키 미설정")
     
     # 이미지 캐시 상태
     cached_images_count = len(current_images) if current_images else 0
@@ -535,8 +534,9 @@ with demo:
     )
     
     # 🔒 보안: 브라우저 새로고침 시 API 키 정리 (F5 보안 문제 해결)
+    # 주의: 너무 자주 호출되지 않도록 조건부 정리
     demo.load(
-        fn=lambda: bl.clear_api_key() or "",
+        fn=lambda: bl.clear_api_key() if bl.current_api_key else None,
         outputs=[]
     )
 
